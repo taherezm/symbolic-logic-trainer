@@ -1,5 +1,6 @@
-# Symbolic Logic Trainer 
-https://github.com/taherezm/symbolic-logic-trainer
+# Symbolic Logic Trainer
+
+Live app: https://taherezm.github.io/symbolic-logic-trainer/
 
 Local beginner trainer for propositional logic. The product is built for repetition, not long lessons: see a prompt, answer, get graded immediately, read a short correction if needed, continue.
 
