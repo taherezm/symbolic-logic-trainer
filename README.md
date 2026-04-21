@@ -149,32 +149,3 @@ tests/
   app.test.tsx         practice-flow and UI behavior tests
   scheduler.test.ts    review-loop tests
 ```
-
-## Local development
-
-Requirements:
-
-- Node.js
-- npm
-
-Install and run:
-
-```bash
-npm install
-npm run dev -- --host 127.0.0.1 --port 4173
-```
-
-Build and test:
-
-```bash
-npm run build
-npm run test -- --run
-```
-
-## Current limits
-
-- propositional logic only
-- no predicate logic
-- no free-response proof derivations
-- no accounts or cloud sync
-- progress is local to the browser on one machine
