@@ -1,42 +1,34 @@
 import { startTransition, useEffect, useRef, useState } from 'react';
-import { exerciseBank, exerciseCounts } from './data';
+import { exerciseBank } from './data';
 import {
   buildTruthValueReview,
   buildValidityReview,
   gradeExercise,
 } from './lib/grading';
 import {
-  accuracyForSkill,
   createEmptyProgress,
   loadProgress,
   resetProgress,
   saveProgress,
   applyOutcome,
 } from './lib/progress';
-import { getUnlockedStageIndex, pickNextExercise } from './lib/scheduler';
 import {
-  SKILL_LABELS,
+  getMissedExerciseCount,
+  getUnlockedStageIndex,
+  pickNextExercise,
+} from './lib/scheduler';
+import {
   STAGE_LABELS,
   STAGE_ORDER,
   type ExerciseOutcome,
   type ExerciseRecord,
   type ProgressState,
-  type SkillKey,
+  type StageId,
   type TruthValueExercise,
 } from './types';
 
 const OPERATOR_BUTTONS = ['¬', '∧', '∨', '→', '↔', '(', ')'];
 const THEME_STORAGE_KEY = 'symbolic-logic-trainer-theme-v1';
-const SKILL_ORDER: SkillKey[] = [
-  'negation',
-  'conjunction',
-  'disjunction',
-  'conditionals',
-  'biconditionals',
-  'translation',
-  'validity',
-  'proofs',
-];
 
 const KNOWN_RULES = [
   'Modus Ponens',
@@ -57,6 +49,7 @@ const NOTATION_GUIDE = [
 ];
 
 type ThemeMode = 'light' | 'dark';
+type PracticeMode = 'adaptive' | 'review-misses' | 'conditionals-focus' | 'stage';
 
 function createInitialState() {
   const progress =
@@ -78,14 +71,6 @@ function getInitialTheme(): ThemeMode {
   }
 
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function formatPercent(value: number | null) {
-  if (value === null) {
-    return 'New';
-  }
-
-  return `${Math.round(value * 100)}%`;
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -181,6 +166,22 @@ function getExerciseGuide(exercise: ExerciseRecord) {
   };
 }
 
+function optionsForPractice(mode: PracticeMode, stage: StageId) {
+  if (mode === 'review-misses') {
+    return { reviewMisses: true };
+  }
+
+  if (mode === 'conditionals-focus') {
+    return { skill: 'conditionals' as const };
+  }
+
+  if (mode === 'stage') {
+    return { stage };
+  }
+
+  return undefined;
+}
+
 export default function App() {
   const initialRef = useRef<ReturnType<typeof createInitialState>>();
   if (!initialRef.current) {
@@ -193,6 +194,8 @@ export default function App() {
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [outcome, setOutcome] = useState<ExerciseOutcome | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>('adaptive');
+  const [selectedStage, setSelectedStage] = useState<StageId>('conditionals');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const continueButtonRef = useRef<HTMLButtonElement>(null);
@@ -200,6 +203,7 @@ export default function App() {
   const currentExercise = exerciseBank.find((exercise) => exercise.id === currentExerciseId)!;
   const unlockedStageIndex = getUnlockedStageIndex(progress);
   const guide = getExerciseGuide(currentExercise);
+  const missedCount = getMissedExerciseCount(exerciseBank, progress);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -290,12 +294,46 @@ export default function App() {
 
   function goToNext() {
     startTransition(() => {
-      const nextExercise = pickNextExercise(exerciseBank, progressRef.current);
+      const nextMode =
+        practiceMode === 'review-misses' &&
+        getMissedExerciseCount(exerciseBank, progressRef.current) === 0
+          ? 'adaptive'
+          : practiceMode;
+      const nextExercise = pickNextExercise(
+        exerciseBank,
+        progressRef.current,
+        optionsForPractice(nextMode, selectedStage),
+      );
+      setPracticeMode(nextMode);
       setCurrentExerciseId(nextExercise.id);
       setTextAnswer('');
       setSubmittedAnswer('');
       setOutcome(null);
     });
+  }
+
+  function selectPracticeMode(nextMode: PracticeMode, nextStage = selectedStage) {
+    startTransition(() => {
+      if (nextMode === 'review-misses' && getMissedExerciseCount(exerciseBank, progressRef.current) === 0) {
+        return;
+      }
+
+      const nextExercise = pickNextExercise(
+        exerciseBank,
+        progressRef.current,
+        optionsForPractice(nextMode, nextStage),
+      );
+      setPracticeMode(nextMode);
+      setSelectedStage(nextStage);
+      setCurrentExerciseId(nextExercise.id);
+      setTextAnswer('');
+      setSubmittedAnswer('');
+      setOutcome(null);
+    });
+  }
+
+  function selectStage(nextStage: StageId) {
+    selectPracticeMode('stage', nextStage);
   }
 
   function insertOperator(symbol: string) {
@@ -327,6 +365,7 @@ export default function App() {
 
     const empty = resetProgress();
     setProgress(empty);
+    setPracticeMode('adaptive');
     setCurrentExerciseId(pickNextExercise(exerciseBank, empty).id);
     setTextAnswer('');
     setSubmittedAnswer('');
@@ -687,17 +726,23 @@ export default function App() {
     progress.session.answered === 0
       ? null
       : progress.session.correct / progress.session.answered;
+  const accuracyText = accuracy === null ? 'New' : `${Math.round(accuracy * 100)}%`;
+  const currentModeLabel =
+    practiceMode === 'adaptive'
+      ? 'Adaptive'
+      : practiceMode === 'review-misses'
+        ? 'Review Misses'
+        : practiceMode === 'conditionals-focus'
+          ? 'Conditionals Focus'
+          : STAGE_LABELS[selectedStage];
 
   return (
     <main className="app-shell">
       <section className="dashboard-panel">
         <div className="dashboard-head">
           <div>
-            <p className="eyebrow">Local Symbolic Logic Trainer</p>
-            <h1>Beginner propositional practice</h1>
-            <p className="panel-copy">
-              One focused loop: answer, get graded instantly, learn the exact mistake, keep moving.
-            </p>
+            <p className="eyebrow">Propositional Practice</p>
+            <h1>Symbolic Logic Trainer</h1>
           </div>
           <div className="theme-toggle" role="group" aria-label="Theme">
             {(['light', 'dark'] as ThemeMode[]).map((mode) => (
@@ -713,30 +758,59 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <span>Session</span>
-            <strong>{progress.session.answered}</strong>
-            <small>{appHeaderSubtitle(progress)}</small>
+
+        <div className="practice-controls">
+          <div className="mode-tabs" role="group" aria-label="Practice mode">
+            <button
+              type="button"
+              className={`mode-button ${practiceMode === 'adaptive' ? 'active' : ''}`}
+              aria-pressed={practiceMode === 'adaptive'}
+              onClick={() => selectPracticeMode('adaptive')}
+            >
+              Adaptive
+            </button>
+            <button
+              type="button"
+              className={`mode-button ${practiceMode === 'review-misses' ? 'active' : ''}`}
+              aria-pressed={practiceMode === 'review-misses'}
+              disabled={missedCount === 0}
+              onClick={() => selectPracticeMode('review-misses')}
+            >
+              Review Misses{missedCount > 0 ? ` (${missedCount})` : ''}
+            </button>
+            <button
+              type="button"
+              className={`mode-button ${practiceMode === 'conditionals-focus' ? 'active' : ''}`}
+              aria-pressed={practiceMode === 'conditionals-focus'}
+              onClick={() => selectPracticeMode('conditionals-focus')}
+            >
+              Conditionals Focus
+            </button>
           </div>
-          <div className="stat-card">
-            <span>Accuracy</span>
-            <strong>{accuracy === null ? 'New' : `${Math.round(accuracy * 100)}%`}</strong>
-            <small>{progress.session.streak} in a row</small>
-          </div>
-          <div className="stat-card">
-            <span>Unlocked Stage</span>
-            <strong>{STAGE_LABELS[STAGE_ORDER[unlockedStageIndex]]}</strong>
-            <small>{exerciseCounts.truthValue + exerciseCounts.translation + exerciseCounts.validity + exerciseCounts.proofs} seeded reps</small>
-          </div>
+
+          <label className="unit-select">
+            <span>Jump to unit</span>
+            <select
+              value={selectedStage}
+              onChange={(event) => selectStage(event.target.value as StageId)}
+            >
+              {STAGE_ORDER.map((stage) => (
+                <option
+                  key={stage}
+                  value={stage}
+                >
+                  {STAGE_LABELS[stage]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-        <div className="skill-strip">
-          {SKILL_ORDER.map((skill) => (
-            <div key={skill} className="skill-pill">
-              <span>{SKILL_LABELS[skill]}</span>
-              <strong>{formatPercent(accuracyForSkill(progress, skill))}</strong>
-            </div>
-          ))}
+
+        <div className="status-row" aria-label="Practice status">
+          <span>{appHeaderSubtitle(progress)}</span>
+          <span>Accuracy {accuracyText}</span>
+          <span>Mode {currentModeLabel}</span>
+          <span>Unlocked {STAGE_LABELS[STAGE_ORDER[unlockedStageIndex]]}</span>
         </div>
       </section>
 

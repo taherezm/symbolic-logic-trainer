@@ -105,9 +105,9 @@ select {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  gap: 18px;
+  gap: 14px;
   padding: 24px;
-  width: min(1160px, 100%);
+  width: min(1040px, 100%);
   margin: 0 auto;
 }
 
@@ -124,16 +124,16 @@ select {
 }
 
 .dashboard-panel {
-  padding: 28px;
+  padding: 20px;
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 .dashboard-head {
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .trainer-card {
@@ -159,11 +159,11 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: 2rem;
 }
 
 h2 {
-  font-size: clamp(1.55rem, 2.5vw, 2.1rem);
+  font-size: 1.85rem;
 }
 
 .panel-copy,
@@ -173,14 +173,7 @@ h2 {
   max-width: 70ch;
 }
 
-.stats-grid {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.stat-card,
-.skill-pill,
+.mode-button,
 .argument-box,
 .formula-board,
 .choice-button,
@@ -197,42 +190,67 @@ h2 {
     color 140ms ease;
 }
 
-.stat-card {
-  background: var(--panel-strong);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 18px;
-  display: grid;
-  gap: 6px;
-}
-
-.stat-card span,
-.skill-pill span,
 .section-label,
 .line-tag,
-.hint-text,
-.stat-card small {
+.hint-text {
   color: var(--ink-soft);
 }
 
-.stat-card strong {
-  font-size: 1.4rem;
-}
-
-.skill-strip {
+.practice-controls {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   gap: 12px;
+  align-items: center;
 }
 
-.skill-pill {
-  background: var(--panel-muted);
+.mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode-button {
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 12px 14px;
+  background: var(--panel-strong);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.mode-button:disabled {
+  opacity: 0.48;
+}
+
+.unit-select {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.unit-select select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--panel-strong);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.status-row {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+  border-top: 1px solid var(--line-faint);
+  padding-top: 12px;
 }
 
 .card-top {
@@ -332,6 +350,7 @@ h2 {
 }
 
 .theme-button:hover,
+.mode-button:hover,
 .reset-button:hover,
 .operator-button:hover,
 .choice-button:hover,
@@ -672,7 +691,8 @@ button:disabled {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -687,9 +707,8 @@ input:focus-visible {
     width: fit-content;
   }
 
-  .stats-grid,
-  .skill-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .practice-controls {
+    grid-template-columns: 1fr;
   }
 
   .guide-strip,
@@ -719,8 +738,8 @@ input:focus-visible {
     border-radius: 6px;
   }
 
-  .stats-grid,
-  .skill-strip {
+  .mode-tabs {
+    display: grid;
     grid-template-columns: 1fr;
   }
 
