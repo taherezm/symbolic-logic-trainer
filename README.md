@@ -41,6 +41,10 @@ Curriculum order:
 10. validity basics
 11. proof basics
 
+## Suggested roadmap
+
+Start in **Adaptive** and make sentence letters, negation, conjunction, and disjunction feel automatic. Then spend extra time in **Conditionals Focus** until `if`, `only if`, sufficient conditions, and necessary conditions are comfortable. After that, move through translation, validity, and proof basics in order. Finish with **Review Misses** until recent mistakes are cleared.
+
 ## How the app works
 
 The app runs one main practice loop:
